@@ -1,5 +1,5 @@
 # Core CrewAI and AI Libraries
-crewai==0.28.8
+crewai>=1.4.0,<2.0
 crewai-tools==0.1.6
 langchain==0.1.20
 langchain-openai==0.0.5
