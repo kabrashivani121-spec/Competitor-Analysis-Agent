@@ -1,3 +1,5 @@
+.idea
+.vscode
 # Environment and sensitive files
 .env
 *.log
