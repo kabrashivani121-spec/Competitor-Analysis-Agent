@@ -1,0 +1,6 @@
+# Environment and sensitive files
+.env
+*.log
+__pycache__/
+*.pyc
+.cursor/
