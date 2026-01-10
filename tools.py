@@ -8,7 +8,7 @@ import time
 import logging
 from typing import Dict, List, Optional, Any
 from serpapi import GoogleSearch
-from crewai import BaseTool
+from crewai_tools import BaseTool
 from pydantic import Field
 import config
 
