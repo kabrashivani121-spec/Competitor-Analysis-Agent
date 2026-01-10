@@ -1,5 +1,6 @@
 # Agent framework
 crewai==0.30.0
+crewai-tools
 
 # LLM + chain
 openai
