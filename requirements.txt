@@ -1,6 +1,5 @@
 # Agent framework
-crewai<2
-crewai-tools<2
+crewai==0.30.0
 
 # LLM + chain
 openai
