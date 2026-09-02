@@ -1,389 +1,102 @@
-# Competitor-Analysis-Agent
-Business Consultant Agent using CrewAI
-# AI-Powered Competitor Analysis System
+# Benchmarking Studio
 
-An intelligent multi-agent competitor analysis platform built with Streamlit, CrewAI, and OpenAI. This system automates competitor research, market analysis, SWOT assessment, and strategic recommendation generation using specialized AI agents.
+A Streamlit application with two selectable analysis models:
 
----
+- **Competitive intelligence** — consulting-style market, competitor, product, pricing, SWOT, evidence-quality, and strategic-recommendation analysis using a five-stage CrewAI workflow.
+- **IB style synthesis** — public-equity valuation using DCF, EV/EBITDA, P/E, dividend discount, residual income, and Graham cross-checks, blended into a banker-style fair-value range.
 
-## 🚀 Overview
+The implementation adapts methodology from [WwaitW/competitor-intel](https://github.com/WwaitW/competitor-intel) and [S0uLL6/Stock-valuation-programm](https://github.com/S0uLL6/Stock-valuation-programm) within the existing OpenAI/SerpAPI application. Optional local clones of those upstream repositories are ignored by Git and are not required to run this integrated app.
 
-The Competitor Analysis System helps businesses quickly generate deep competitive intelligence reports by orchestrating multiple AI agents with clearly defined responsibilities.
+## Features
 
-The platform:
-- Identifies and researches competitors
-- Collects pricing, feature, and review data
-- Performs SWOT and market positioning analysis
-- Generates executive-ready strategic reports
-- Exports findings as PDF or text reports
+### Competitive intelligence
 
----
+- Competitor discovery and multi-source web research
+- Trusted-source gate that excludes unrecognized search results and retains source classifications
+- Dedicated discovery for initiating-coverage, equity-research, industry-outlook, annual-report, and regulatory-filing sources
+- Public URL ingestion and PDF/text/Markdown uploads for reports the user is authorized to use
+- Company, product, feature, pricing, packaging, and business-model comparison
+- Customer sentiment, target segment, hiring, investment, and momentum signals
+- SWOT, positioning, market trends, white-space analysis, threats, and opportunities
+- Dedicated product-benchmarking stage
+- Product-idea discovery workflow using a problem, target user, solution, value proposition, and assumptions
+- Evidence-quality gate scoring source quality, recency, completeness, consistency, depth, and actionability; low-scoring dimensions trigger supplemental research
+- Executive report with immediate, short-term, and long-term recommendations
+- PDF/text export, local report history, and engagement notes
+- Incremental knowledge reuse: prior reports and manual notes are injected into repeat analyses to focus on material changes
+- Quick, standard, and deep research configurations
 
-## 🧠 Multi-Agent Architecture
+### Trusted-source policy
 
-The system uses three specialized AI agents powered by CrewAI.
+Competitive-intelligence web results are limited to official company and competitor websites;
+official regulatory filings and recognized exchanges; established investment-bank, ratings,
+consulting, and industry-research publishers; recognized business press; and reputable review
+platforms. The research and quality-review stages must mark unsupported facts as
+`Unknown / not verified`, and the final report includes a trusted source register.
 
-### 1. Research Agent 🔎
-Responsible for:
-- Competitor discovery
-- Market research
-- Pricing analysis
-- Customer review collection
-- Company information gathering
+The sidebar also accepts direct public report URLs and uploaded PDF, text, or Markdown reports.
+Direct links are treated as explicitly user-approved sources only after a safe public-URL check.
+Paywalls, logins, and publisher access controls are never bypassed; licensed reports must be
+uploaded by an authorized user.
 
-**Tools Used**
-- Competitor Search Tool
-- Company Info Tool
-- Pricing Search Tool
-- Review Search Tool
+### IB style synthesis
 
----
+- Manual assumptions or prefilling from Yahoo Finance and MOEX/Smart-Lab
+- Yahoo peer ticker collection with filtered median P/E and EV/EBITDA
+- OpenAI-assisted financial extraction from annual-report PDFs
+- CAPM cost of equity and capital-structure weighted WACC
+- DCF, P/E, EV/EBITDA, dividend discount, residual-income, and Graham methodologies
+- Automatic omission of inapplicable methods and extreme-outlier filtering
+- Reweighted fair-value midpoint, valuation range, upside/downside, and football-field chart
+- Markdown and Excel workbook export
+- Persistent valuation history and portfolio benchmarking
 
-### 2. Analysis Agent 📊
-Responsible for:
-- SWOT analysis
-- Competitive benchmarking
-- Trend analysis
-- Market positioning analysis
-- Opportunity/threat detection
+## Project layout
 
-**Tools Used**
-- Data Processor Tool
-
----
-
-### 3. Report Agent 📝
-Responsible for:
-- Strategic synthesis
-- Executive summaries
-- Recommendations
-- Final report generation
-
----
-
-# ✨ Features
-
-- ✅ AI-powered competitor discovery
-- ✅ Automated SWOT analysis
-- ✅ Competitive comparison matrices
-- ✅ Strategic recommendations
-- ✅ PDF report export
-- ✅ Interactive Streamlit dashboard
-- ✅ Configurable analysis depth
-- ✅ Multi-agent orchestration
-- ✅ Real-time progress tracking
-- ✅ Session state management
-
----
-
-# 🏗️ Tech Stack
-
-| Technology | Purpose |
-|---|---|
-| Streamlit | Frontend UI |
-| CrewAI | Multi-agent orchestration |
-| LangChain | LLM integrations |
-| OpenAI | AI reasoning and generation |
-| SerpAPI | Search and web intelligence |
-| Python | Backend development |
-
----
-
-# 📂 Project Structure
-
-```bash
-competitor-analysis-system/
-│
-├── app.py                  # Main Streamlit application
-├── agents.py               # Agent definitions
-├── tasks.py                # CrewAI task definitions
-├── tools.py                # External search/data tools
-├── utils.py                # Utility functions
-├── config.py               # Configuration settings
-├── requirements.txt
-├── .env
-│
-├── reports/                # Generated reports
-└── README.md
+```text
+app.py                                  Streamlit UI and model selector
+agents.py / tasks.py                    Five-stage competitive-intelligence workflow
+tools.py                                SerpAPI search and data-processing tools
+trusted_sources.py                      Source allowlist, safe report ingestion, and text extraction
+ib_synthesis.py                         Valuation, market-data, PDF, and export engine
+benchmark_store.py                      SQLite reports, notes, and portfolio storage
+config.py / utils.py                    Configuration, reporting, and utility helpers
+tests/                                  Unit and Streamlit mode tests
 ```
 
----
+## Setup on Windows
 
-# ⚙️ Installation
-
-## 1. Clone the Repository
-
-```bash
-git clone https://github.com/your-username/competitor-analysis-system.git
-cd competitor-analysis-system
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
 
----
-
-## 2. Create Virtual Environment
-
-```bash
-python -m venv venv
-```
-
-Activate the environment:
-
-### Mac/Linux
-```bash
-source venv/bin/activate
-```
-
-### Windows
-```bash
-venv\Scripts\activate
-```
-
----
-
-## 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-# 🔑 Environment Variables
-
-Create a `.env` file in the root directory.
+Set credentials in `.env`:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key
 SERPAPI_API_KEY=your_serpapi_api_key
+OPENAI_MODEL=gpt-4.1-mini
 ```
 
----
+Both keys are required for competitive intelligence. IB calculations and manual inputs work without them; `OPENAI_API_KEY` is only required there for annual-report extraction. Yahoo Finance and MOEX/Smart-Lab do not require API keys.
 
-# ▶️ Running the Application
+## Run
 
-Start the Streamlit app:
-
-```bash
-streamlit run app.py
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
-The app will open at:
+Open [http://127.0.0.1:8501](http://127.0.0.1:8501), then choose **Competitive intelligence** or **IB style synthesis** in the sidebar.
 
-```bash
-http://localhost:8501
+Runtime state is stored under `.runtime/`, including `benchmarking.db` and the Yahoo Finance cache. `.env`, `.runtime/`, logs, and the virtual environment are ignored by Git.
+
+## Test
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m pip check
 ```
 
----
-
-# 📋 Usage
-
-## Step 1: Enter Company Information
-Provide:
-- Company name
-- Industry
-
-Example:
-- Slack
-- SaaS
-
----
-
-## Step 2: Configure Analysis
-
-Select:
-- Number of competitors
-- Analysis depth
-  - Quick
-  - Standard
-  - Deep
-
----
-
-## Step 3: Run Analysis
-
-Click:
-
-```bash
-🚀 Start Analysis
-```
-
-The system will:
-1. Initialize AI agents
-2. Create tasks
-3. Assemble the CrewAI workflow
-4. Execute research and analysis
-5. Generate the final report
-
----
-
-# 📊 Output
-
-The platform generates:
-- Executive summary
-- Competitor profiles
-- SWOT analysis
-- Competitor comparison matrix
-- Strategic recommendations
-- Threat and opportunity assessment
-
----
-
-# 📥 Export Options
-
-Users can export:
-- PDF reports
-- Plain text reports
-
----
-
-# 🧩 Core Workflow
-
-```mermaid
-graph TD
-    A[User Input] --> B[Research Agent]
-    B --> C[Analysis Agent]
-    C --> D[Report Agent]
-    D --> E[Final Strategic Report]
-```
-
----
-
-# 🛠️ Key Components
-
-## `app.py`
-Main Streamlit application:
-- UI rendering
-- Session state management
-- Workflow execution
-- Progress tracking
-- Report visualization
-
----
-
-## `agents.py`
-Defines:
-- Research Agent
-- Analysis Agent
-- Report Agent
-
-Each agent has:
-- Role
-- Goal
-- Backstory
-- Tools
-- Memory
-- LLM configuration
-
----
-
-## `tasks.py`
-Defines CrewAI task orchestration:
-- Research tasks
-- Analysis tasks
-- Reporting tasks
-
----
-
-## `utils.py`
-Utility functions:
-- PDF generation
-- Report formatting
-- Metric extraction
-- Filename generation
-
----
-
-# 🔄 Analysis Pipeline
-
-```python
-1. Initialize Agents
-2. Create Tasks
-3. Assemble Crew
-4. Execute Sequential Workflow
-5. Generate Insights
-6. Render Dashboard
-7. Export Reports
-```
-
----
-
-# 🧪 Example Use Cases
-
-## SaaS Competitive Intelligence
-Analyze:
-- Slack vs Microsoft Teams
-- Notion vs Confluence
-- Shopify vs BigCommerce
-
----
-
-## E-Commerce Market Research
-Compare:
-- Pricing models
-- Customer reviews
-- Product differentiation
-- Feature positioning
-
----
-
-## Startup Strategy
-Identify:
-- Market gaps
-- Competitive threats
-- Expansion opportunities
-- Product improvement areas
-
----
-
-# 🔒 Error Handling
-
-The application includes:
-- API key validation
-- Exception handling
-- Session recovery
-- User-friendly error messages
-- Logging support
-
----
-
-# 📈 Future Enhancements
-
-Planned improvements:
-- Real-time web scraping
-- Vector database integration
-- Historical competitor tracking
-- Dashboard analytics
-- Custom report templates
-- Multi-language support
-- Async parallel agent execution
-- Competitor sentiment analysis
-
----
-
-# 🤝 Contributing
-
-Contributions are welcome.
-
-## Steps
-1. Fork the repository
-2. Create a feature branch
-3. Commit changes
-4. Push branch
-5. Open a Pull Request
-
----
-
-# 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-# 👨‍💻 Author
-
-Built using:
-- CrewAI
-- Streamlit
-- OpenAI
-
-Designed for automated strategic competitor intelligence and AI-driven business analysis.
+Valuation output is analytical decision support and is not investment advice. Review source quality, accounting units, peer selection, and assumptions before relying on results.

@@ -1,6 +1,7 @@
 # Agent framework
 crewai==0.30.0
-crewai-tools
+crewai-tools==0.4.6
+setuptools<81  # CrewAI 0.30 imports pkg_resources
 
 # LLM + chain
 openai
@@ -8,11 +9,6 @@ langchain<0.2
 langchain-openai
 tiktoken
 httpx<1
-
-# Search + app
-google-search-results
-streamlit
-pandas
 
 # Core
 pandas==2.2.2
@@ -24,12 +20,13 @@ google-search-results==2.4.2
 # Streamlit UI
 streamlit==1.52.1
 
-# Data Processing
-pandas==2.2.2
-numpy==1.26.4
-
 # PDF Generation
 reportlab==4.2.0
+pypdf>=4.0.1,<5.0.0
+
+# Public-market data and workbook export
+yfinance==0.2.65
+openpyxl==3.1.5
 
 # Environment and Configuration
 python-dotenv>=1.1.1

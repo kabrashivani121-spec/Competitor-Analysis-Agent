@@ -4,15 +4,17 @@ Defines three specialized agents: Research, Analysis, and Report
 """
 
 import logging
+import config
 from crewai import Agent
 from langchain_openai import ChatOpenAI
-import config
 from tools import (
-    competitor_search_tool,
-    company_info_tool,
-    pricing_search_tool,
-    review_search_tool,
-    data_processor_tool
+    CompanyInfoTool,
+    CompetitorSearchTool,
+    CoverageReportSearchTool,
+    DataProcessorTool,
+    OfficialWebsiteSearchTool,
+    PricingSearchTool,
+    ReviewSearchTool,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,11 +25,18 @@ def create_llm(temperature: float = 0.7):
     return ChatOpenAI(
         model=config.OPENAI_MODEL,
         temperature=temperature,
-        api_key=config.OPENAI_API_KEY
+        api_key=config.OPENAI_API_KEY,
+        request_timeout=config.OPENAI_TIMEOUT_SECONDS,
+        max_retries=config.OPENAI_MAX_RETRIES,
     )
 
 
-def create_research_agent(company_name: str, industry: str) -> Agent:
+def create_research_agent(
+    company_name: str,
+    industry: str,
+    analysis_depth: str = config.ANALYSIS_DEPTH,
+    trusted_domains: list[str] | None = None,
+) -> Agent:
     """
     Create Research Agent - Specialist in gathering competitor data
     
@@ -49,15 +58,23 @@ def create_research_agent(company_name: str, industry: str) -> Agent:
     
     backstory = config.RESEARCH_AGENT_BACKSTORY
     
+    depth_config = config.ANALYSIS_DEPTH_CONFIG.get(
+        analysis_depth,
+        config.ANALYSIS_DEPTH_CONFIG["standard"],
+    )
+
+    trusted_domains = trusted_domains or []
     agent = Agent(
         role=role,
         goal=goal,
         backstory=backstory,
         tools=[
-            competitor_search_tool,
-            company_info_tool,
-            pricing_search_tool,
-            review_search_tool
+            CompetitorSearchTool(max_results=depth_config["max_search_results"], allowed_domains=trusted_domains),
+            CoverageReportSearchTool(allowed_domains=trusted_domains),
+            OfficialWebsiteSearchTool(allowed_domains=trusted_domains),
+            CompanyInfoTool(allowed_domains=trusted_domains),
+            PricingSearchTool(allowed_domains=trusted_domains),
+            ReviewSearchTool(allowed_domains=trusted_domains),
         ],
         llm=create_llm(temperature=0.5),
         verbose=True,
@@ -96,7 +113,7 @@ def create_analysis_agent(company_name: str, industry: str) -> Agent:
         role=role,
         goal=goal,
         backstory=backstory,
-        tools=[data_processor_tool],
+        tools=[DataProcessorTool()],
         llm=create_llm(temperature=0.4),
         verbose=True,
         allow_delegation=False,
@@ -146,7 +163,58 @@ def create_report_agent(company_name: str, industry: str) -> Agent:
     return agent
 
 
-def create_all_agents(company_name: str, industry: str) -> dict:
+def create_product_agent(company_name: str, industry: str, our_product: str = "") -> Agent:
+    """Create the product-comparison specialist."""
+    product_context = our_product.strip() or company_name
+    return Agent(
+        role=config.PRODUCT_AGENT_ROLE,
+        goal=config.PRODUCT_AGENT_GOAL.format(
+            company_name=product_context,
+            industry=industry,
+        ),
+        backstory=config.PRODUCT_AGENT_BACKSTORY,
+        tools=[],
+        llm=create_llm(temperature=0.3),
+        verbose=True,
+        allow_delegation=False,
+        max_iter=10,
+        memory=True,
+    )
+
+
+def create_evaluator_agent(
+    company_name: str,
+    industry: str,
+    trusted_domains: list[str] | None = None,
+) -> Agent:
+    """Create the evidence and quality-review specialist."""
+    return Agent(
+        role=config.EVALUATOR_AGENT_ROLE,
+        goal=config.EVALUATOR_AGENT_GOAL.format(
+            company_name=company_name,
+            industry=industry,
+        ),
+        backstory=config.EVALUATOR_AGENT_BACKSTORY,
+        tools=[
+            CoverageReportSearchTool(allowed_domains=trusted_domains or []),
+            OfficialWebsiteSearchTool(allowed_domains=trusted_domains or []),
+            CompanyInfoTool(allowed_domains=trusted_domains or []),
+        ],
+        llm=create_llm(temperature=0.2),
+        verbose=True,
+        allow_delegation=False,
+        max_iter=8,
+        memory=True,
+    )
+
+
+def create_all_agents(
+    company_name: str,
+    industry: str,
+    analysis_depth: str = config.ANALYSIS_DEPTH,
+    our_product: str = "",
+    trusted_domains: list[str] | None = None,
+) -> dict:
     """
     Create all three agents for the competitor analysis system
     
@@ -160,8 +228,10 @@ def create_all_agents(company_name: str, industry: str) -> dict:
     logger.info(f"Creating all agents for {company_name} in {industry}")
     
     agents = {
-        "research": create_research_agent(company_name, industry),
+        "research": create_research_agent(company_name, industry, analysis_depth, trusted_domains),
         "analysis": create_analysis_agent(company_name, industry),
+        "product": create_product_agent(company_name, industry, our_product),
+        "evaluator": create_evaluator_agent(company_name, industry, trusted_domains),
         "report": create_report_agent(company_name, industry)
     }
     

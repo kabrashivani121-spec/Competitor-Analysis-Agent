@@ -6,3 +6,9 @@
 __pycache__/
 *.pyc
 .cursor/
+.venv/
+.runtime/
+
+# Upstream reference clones retained locally for provenance
+01_consulting_competitor-intel/
+02_investment_banking_stock-valuation/

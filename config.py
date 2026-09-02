@@ -5,16 +5,38 @@ Handles environment variables, constants, and logging setup
 
 import os
 import logging
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, List
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
+# Keep third-party runtime state inside the project. CrewAI 0.30 and
+# Embedchain otherwise write to the user's profile during import, which can
+# fail in containers, hosted deployments, and restricted environments.
+PROJECT_ROOT = Path(__file__).resolve().parent
+RUNTIME_DIR = Path(os.getenv("APP_RUNTIME_DIR", PROJECT_ROOT / ".runtime"))
+RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("EMBEDCHAIN_CONFIG_DIR", str(RUNTIME_DIR))
+os.environ.setdefault("XDG_DATA_HOME", str(RUNTIME_DIR))
+TIKTOKEN_CACHE_DIR = Path(
+    os.getenv("TIKTOKEN_CACHE_DIR", RUNTIME_DIR / "tiktoken")
+)
+TIKTOKEN_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("TIKTOKEN_CACHE_DIR", str(TIKTOKEN_CACHE_DIR))
+# CrewAI 0.30 passes this value to appdirs as the application name. An
+# absolute path therefore selects this directory on every supported OS.
+os.environ.setdefault("CREWAI_STORAGE_DIR", str(RUNTIME_DIR / "crewai"))
+
 # API Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
+OPENAI_TIMEOUT_SECONDS = float(os.getenv("OPENAI_TIMEOUT_SECONDS", "120"))
+OPENAI_MAX_RETRIES = int(os.getenv("OPENAI_MAX_RETRIES", "2"))
 SERPAPI_API_KEY = os.getenv("SERPAPI_API_KEY", "")
+SERPAPI_TIMEOUT_SECONDS = float(os.getenv("SERPAPI_TIMEOUT_SECONDS", "30"))
 
 # Application Settings
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -94,12 +116,24 @@ strategic insights. With expertise in management consulting and business intelli
 drive executive decision-making. Your recommendations are known for being practical, data-driven, and aligned 
 with business objectives."""
 
+PRODUCT_AGENT_ROLE = "Competitive Product Manager"
+PRODUCT_AGENT_GOAL = """Build a decision-grade feature, packaging, pricing, and business-model comparison for
+{company_name} in the {industry} industry. Highlight customer jobs, differentiation, switching costs, and gaps."""
+PRODUCT_AGENT_BACKSTORY = """You are a senior product leader who turns market evidence into clear feature
+matrices, positioning choices, and product roadmap implications. You distinguish sourced facts from inference."""
+
+EVALUATOR_AGENT_ROLE = "Competitive Intelligence Quality Reviewer"
+EVALUATOR_AGENT_GOAL = """Audit the evidence and analysis for {company_name}. Score source quality,
+completeness, recency, internal consistency, analytical depth, and actionability, then prescribe corrections."""
+EVALUATOR_AGENT_BACKSTORY = """You are an exacting consulting engagement reviewer. You challenge weak claims,
+flag missing citations and stale evidence, and require concrete remediation before executive delivery."""
+
 # Search Query Templates
 COMPETITOR_SEARCH_QUERIES: List[str] = [
     "{company_name} competitors {industry}",
     "top companies in {industry} like {company_name}",
     "{company_name} alternatives",
-    "best {industry} companies 2024"
+    f"best {{industry}} companies {datetime.now().year}"
 ]
 
 PRICING_SEARCH_QUERIES: List[str] = [

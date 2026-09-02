@@ -21,6 +21,36 @@ import re
 logger = logging.getLogger(__name__)
 
 
+DETAILED_ANALYSIS_DIMENSIONS = (
+    "Financial Performance",
+    "Business Model",
+    "Product/Services",
+    "Pricing Structure",
+    "Brand & Marketing",
+    "Sales & Distribution",
+    "Market Reach/Share",
+    "Customer Perception",
+    "Operational Capabilities",
+    "Talent & Culture",
+    "Strategic Moves",
+    "SWOT Analysis",
+)
+
+QUANTIFIED_DETAILED_ANALYSIS_DIMENSIONS = (
+    "Financial Performance",
+    "Product/Services",
+    "Pricing Structure",
+    "Sales & Distribution",
+    "Market Reach/Share",
+)
+
+DETAILED_ANALYSIS_FRAMEWORK = {
+    "Assess": ("Industry Overview", "Competitor Landscape"),
+    "Benchmark (Competitor Deep-Dive)": DETAILED_ANALYSIS_DIMENSIONS,
+    "Strategize": ("Competitive Strategy", "Actionable Recommendations"),
+}
+
+
 class PDFReportGenerator:
     """Generate professional PDF reports from competitor analysis results"""
     
@@ -220,10 +250,10 @@ class PDFReportGenerator:
                 bullet = Paragraph(f"• {text}", self.styles['CustomBullet'])
                 elements.append(bullet)
                 
-            elif line.startswith('1. ') or line.startswith('2. ') or line.startswith('3. '):
+            elif re.match(r'^\d+\.\s+', line):
                 # Numbered list
-                text = line[3:].strip()
-                num = line[0]
+                num, text = line.split('.', 1)
+                text = text.strip()
                 bullet = Paragraph(f"{num}. {text}", self.styles['CustomBullet'])
                 elements.append(bullet)
                 
@@ -276,44 +306,60 @@ def format_report_for_display(report_content: str) -> Dict[str, str]:
         # Split content into sections based on headers
         current_section = None
         current_content = []
+
+        def flush_section():
+            nonlocal current_content
+            if not current_section or not current_content:
+                return
+
+            content = '\n'.join(current_content).strip()
+            if not content:
+                current_content = []
+                return
+
+            if sections[current_section]:
+                sections[current_section] += f"\n\n{content}"
+            else:
+                sections[current_section] = content
+            current_content = []
         
         lines = report_content.split('\n')
         
         for line in lines:
-            line_lower = line.lower().strip()
-            
-            # Detect section headers
-            if 'executive summary' in line_lower or 'key findings' in line_lower:
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content)
-                current_section = "overview"
-                current_content = [line]
-                
-            elif 'detailed competitor analysis' in line_lower or 'swot' in line_lower:
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content)
-                current_section = "detailed_analysis"
-                current_content = [line]
-                
-            elif 'comparison matrix' in line_lower or 'competitive comparison' in line_lower:
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content)
-                current_section = "competitor_matrix"
-                current_content = [line]
-                
-            elif 'recommendation' in line_lower or 'strategic' in line_lower and 'recommendation' in line_lower:
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content)
-                current_section = "recommendations"
-                current_content = [line]
-                
-            else:
+            stripped = line.strip()
+            if stripped.startswith("## ") and not stripped.startswith("### "):
+                heading = stripped[3:].strip().lower()
+                if heading in {
+                    "executive summary",
+                    "key findings",
+                    "competitive landscape overview",
+                }:
+                    target_section = "overview"
+                elif heading == "detailed competitor analysis":
+                    target_section = "detailed_analysis"
+                elif "comparison matrix" in heading:
+                    target_section = "competitor_matrix"
+                elif heading in {
+                    "market opportunities",
+                    "competitive threats",
+                    "strategic recommendations",
+                    "conclusion",
+                    "trusted source register",
+                }:
+                    target_section = "recommendations"
+                else:
+                    target_section = current_section
+
+                if target_section != current_section:
+                    flush_section()
+                    current_section = target_section
                 if current_section:
                     current_content.append(line)
+            elif current_section:
+                current_content.append(line)
         
         # Add final section
-        if current_section:
-            sections[current_section] = '\n'.join(current_content)
+        flush_section()
         
         # If sections are empty, put everything in overview
         if not any(sections.values()):
@@ -344,41 +390,178 @@ def extract_key_metrics(report_content: str) -> Dict:
     }
     
     try:
-        lines = report_content.split('\n')
-        
-        # Count competitors (look for ### headings in competitor sections)
-        for line in lines:
-            if line.startswith('### ') and not any(x in line.lower() for x in ['recommendation', 'summary', 'finding']):
+        current_h2 = ""
+        for raw_line in report_content.splitlines():
+            line = raw_line.strip()
+            line_lower = line.lower()
+
+            if line.startswith('## '):
+                current_h2 = line[3:].strip().lower()
+                continue
+
+            if (
+                'detailed competitor analysis' in current_h2
+                and line.startswith('### ')
+            ):
                 metrics["num_competitors"] += 1
-        
-        # Extract key findings (numbered lists in key findings section)
-        in_findings = False
-        for line in lines:
-            if 'key findings' in line.lower():
-                in_findings = True
-                continue
-            if in_findings:
-                if line.strip().startswith(('1.', '2.', '3.', '4.', '5.')):
-                    metrics["key_findings"].append(line.strip()[3:].strip())
-                elif line.startswith('##'):
-                    break
-        
-        # Count opportunities
-        in_opportunities = False
-        for line in lines:
-            if 'market opportunities' in line.lower() or 'opportunities' in line.lower():
-                in_opportunities = True
-                continue
-            if in_opportunities:
-                if line.strip().startswith(('1.', '2.', '3.', '-', '*')):
-                    metrics["opportunities"] += 1
-                elif line.startswith('##'):
-                    break
+
+            list_match = re.match(r'^(?:\d+\.|[-*])\s+(.+)', line)
+            if list_match and 'key findings' in current_h2:
+                metrics["key_findings"].append(list_match.group(1).strip())
+            if list_match and 'market opportunities' in current_h2:
+                metrics["opportunities"] += 1
+
+            plain_line = re.sub(r'[*_`]', '', line_lower)
+            threat_match = re.search(
+                r'competitive threat level\s*:?\s*(high|medium|low)',
+                plain_line,
+            )
+            if threat_match:
+                levels = {'low': 1, 'medium': 2, 'high': 3}
+                current = metrics["threat_level"].lower()
+                candidate = threat_match.group(1)
+                if levels[candidate] > levels[current]:
+                    metrics["threat_level"] = candidate.title()
                     
     except Exception as e:
         logger.error(f"Error extracting metrics: {str(e)}")
     
     return metrics
+
+
+def _contains_non_year_number(text: str) -> bool:
+    """Return whether text contains a quantitative magnitude rather than only a year."""
+    without_urls = re.sub(r"https?://\S+", "", text)
+    numbers = re.findall(
+        r"(?<!\d)(?:\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(?!\d)",
+        without_urls,
+    )
+    return any(
+        not (number.isdigit() and len(number) == 4 and 1900 <= int(number) <= 2100)
+        for number in numbers
+    )
+
+
+def enforce_quantification_disclosures(report_content: str) -> str:
+    """Mark qualitative-only quantitative fields as unverified without inventing figures."""
+    dimension_pattern = "|".join(
+        re.escape(dimension) for dimension in DETAILED_ANALYSIS_DIMENSIONS
+    )
+    quantitative_pattern = "|".join(
+        re.escape(dimension) for dimension in QUANTIFIED_DETAILED_ANALYSIS_DIMENSIONS
+    )
+    field_pattern = re.compile(
+        rf"(?ms)(?P<prefix>^[ \t]*[-*][ \t]+\*\*(?P<label>{quantitative_pattern})(?::)?\*\*[ \t]*(?::)?[ \t]*)"
+        rf"(?P<value>.*?)(?=^[ \t]*[-*][ \t]+\*\*(?:{dimension_pattern}|Competitive\ Threat\ Level)(?::)?\*\*|^###\s|^##\s|\Z)"
+    )
+
+    def add_disclosure(match: re.Match) -> str:
+        value = match.group("value")
+        normalized = value.lower()
+        has_number = _contains_non_year_number(value)
+        has_source = "source:" in normalized or "http://" in normalized or "https://" in normalized
+        if has_number and not has_source:
+            return (
+                f'{match.group("prefix")}Unknown / not verified. '
+                "The supplied magnitude had no inline trusted-source attribution.\n"
+            )
+        if "unknown / not verified" in normalized or has_number:
+            return match.group(0)
+        cleaned = value.strip()
+        context = f" Qualitative context: {cleaned}" if cleaned else ""
+        return f'{match.group("prefix")}Unknown / not verified.{context}\n'
+
+    return field_pattern.sub(add_disclosure, report_content)
+
+
+def competitor_report_issues(report_content: str, expected_competitors: int) -> List[str]:
+    """Return structural problems that would make a generated report unusable in the UI."""
+    content = (report_content or "").strip()
+    issues = []
+    if len(content) < 1200:
+        issues.append("report is too short")
+
+    required_sections = (
+        "executive summary",
+        "key findings",
+        "detailed competitor analysis",
+        "competitive comparison matrix",
+        "strategic recommendations",
+        "trusted source register",
+    )
+    lowered = content.lower()
+    for section in required_sections:
+        if section not in lowered:
+            issues.append(f"missing {section} section")
+
+    metrics = extract_key_metrics(content)
+    if metrics["num_competitors"] < expected_competitors:
+        issues.append(
+            f"found {metrics['num_competitors']} competitor profiles; expected {expected_competitors}"
+        )
+    if not metrics["key_findings"]:
+        issues.append("no parsable key findings")
+
+    detailed = format_report_for_display(content)["detailed_analysis"]
+    framework_labels = (
+        "Industry Overview",
+        "Competitor Landscape",
+        *DETAILED_ANALYSIS_DIMENSIONS,
+        "Competitive Strategy",
+        "Actionable Recommendations",
+    )
+    missing_labels = [label for label in framework_labels if label.lower() not in detailed.lower()]
+    if missing_labels:
+        issues.append("detailed analysis missing framework fields: " + ", ".join(missing_labels))
+
+    profile_matches = list(re.finditer(r"(?m)^###\s+(.+?)\s*$", detailed))
+    incomplete_profiles = []
+    unquantified_profiles = []
+    for index, match in enumerate(profile_matches):
+        profile_name = match.group(1).strip()
+        profile_end = profile_matches[index + 1].start() if index + 1 < len(profile_matches) else len(detailed)
+        profile_body = detailed[match.end():profile_end]
+        profile_body_lower = profile_body.lower()
+        missing_dimensions = [
+            dimension for dimension in DETAILED_ANALYSIS_DIMENSIONS
+            if dimension.lower() not in profile_body_lower
+        ]
+        if missing_dimensions:
+            incomplete_profiles.append(f"{profile_name} ({', '.join(missing_dimensions)})")
+
+        quantification_gaps = []
+        for dimension in QUANTIFIED_DETAILED_ANALYSIS_DIMENSIONS:
+            field_start = profile_body_lower.find(dimension.lower())
+            if field_start < 0:
+                continue
+            later_starts = [
+                profile_body_lower.find(other.lower(), field_start + len(dimension))
+                for other in DETAILED_ANALYSIS_DIMENSIONS
+            ]
+            field_end_candidates = [position for position in later_starts if position >= 0]
+            field_end = min(field_end_candidates) if field_end_candidates else len(profile_body)
+            field_text = profile_body[field_start:field_end]
+            normalized_field = field_text.lower()
+            has_number = _contains_non_year_number(field_text)
+            has_source = (
+                "source:" in normalized_field
+                or "http://" in normalized_field
+                or "https://" in normalized_field
+            )
+            if "unknown / not verified" not in normalized_field and not has_number:
+                quantification_gaps.append(dimension)
+            elif has_number and not has_source:
+                quantification_gaps.append(f"{dimension} [number lacks inline source]")
+        if quantification_gaps:
+            unquantified_profiles.append(f"{profile_name} ({', '.join(quantification_gaps)})")
+    if incomplete_profiles:
+        issues.append("incomplete competitor deep-dives: " + "; ".join(incomplete_profiles))
+    if unquantified_profiles:
+        issues.append(
+            "quantitative fields require a non-year number or Unknown / not verified: "
+            + "; ".join(unquantified_profiles)
+        )
+    return issues
 
 
 def clean_text_for_export(text: str) -> str:
