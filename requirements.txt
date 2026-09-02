@@ -1,6 +1,5 @@
 # Agent framework
 crewai==0.30.0
-crewai-tools==0.4.6
 setuptools==80.10.2  # CrewAI 0.30 imports pkg_resources
 rich==13.9.4  # Required by Embedchain 0.1.113 and Instructor 0.5.2
 

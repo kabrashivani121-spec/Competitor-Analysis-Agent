@@ -11,8 +11,8 @@ from typing import Any, Dict
 from urllib.parse import urlparse
 import config
 from serpapi import GoogleSearch
-from crewai_tools import BaseTool
-from pydantic import Field
+from langchain_core.tools import BaseTool
+from pydantic.v1 import Field
 
 from trusted_sources import domain_matches, normalize_domain, trusted_organic_results
 
